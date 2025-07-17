@@ -1,37 +1,23 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/common-nighthawk/go-figure"
+	"github.com/dhowden/tag"
+	"github.com/hajimehoshi/oto"
+	"github.com/tosone/minimp3"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"log"
 	"os"
 	"time"
-	"unicode"
-
-	"github.com/dhowden/tag"
-	"github.com/hajimehoshi/oto"
-	"github.com/qeesung/image2ascii/convert"
-	"github.com/tosone/minimp3"
 )
-
-func greeter() {
-	fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
-	ascII("         Y2Go ")
-	fmt.Print("V0.2 Dev")
-	fmt.Println("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-	fmt.Print("\nTo play music - enter a full path to an .mp3 file:")
-}
 
 // /home/daniil/Downloads/OldFlavours.mp3
 
 func main() {
-	greeter()
-	path := scanner() // Bufio scan
+	path := "/home/daniil/Downloads/OldFlavours.mp3"
 
 	var err error
 	var file []byte
@@ -66,33 +52,6 @@ func main() {
 	}
 }
 
-func scanner() string {
-	reader := bufio.NewScanner(os.Stdin)
-	_ = reader.Scan()
-	path := reader.Text()
-	fmt.Print("\n")
-	return path
-}
-
-func songLength(dec *minimp3.Decoder, data []byte) float64 {
-	bytesPerSample := 2
-	channels := dec.Channels
-	sampleRate := dec.SampleRate
-
-	totalSamples := len(data) / (bytesPerSample * channels)
-	durationSeconds := float64(totalSamples) / float64(sampleRate)
-
-	return durationSeconds
-}
-
-//func lenghtConverter(length float64) {
-//	var minsfloat float64
-//	minsfloat = length / 60.0
-//	mins := int(minsfloat)
-//	secsfloat := length - (float64(mins) * 60)
-//	fmt.Printf("the length is %v mins %.2f secs\n", mins, secsfloat)
-//}
-
 func printMetadata(path string) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -100,22 +59,16 @@ func printMetadata(path string) {
 	}
 	defer file.Close()
 
-	options := convert.DefaultOptions
-	options.FixedWidth = 96
-	options.FixedHeight = 30
-
 	metadata, err := tag.ReadFrom(file)
 	if err != nil {
 		log.Fatal(err)
 	}
 	pic := metadata.Picture()
 	if pic != nil {
-		img, _ := decodeImage(pic.Data, pic.MIMEType)
-		asc := convert.NewImageConverter()
-		fmt.Print(asc.Image2ASCIIString(img, &options))
+		decodeImage(pic.Data, pic.MIMEType)
 	}
-	ascII(filterSpecialSymbols(fmt.Sprintf(metadata.Title())))
-	ascIIlow(filterSpecialSymbols(fmt.Sprintf("By %v", metadata.Artist())))
+	fmt.Sprintf(metadata.Title())
+	fmt.Sprintf("By %v", metadata.Artist())
 }
 
 func decodeImage(data []byte, mimeType string) (image.Image, error) {
@@ -128,24 +81,4 @@ func decodeImage(data []byte, mimeType string) (image.Image, error) {
 	default:
 		return nil, fmt.Errorf("unsupported image format: %s", mimeType)
 	}
-}
-
-func ascII(text string) {
-	myFigure := figure.NewFigure(text, "nancyj", true)
-	myFigure.Print()
-}
-
-func ascIIlow(text string) {
-	myFigure := figure.NewFigure(text, "italic", true)
-	myFigure.Print()
-}
-
-func filterSpecialSymbols(input string) string {
-	var result []rune
-	for _, r := range input {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == ' ' || r == '(' || r == ')' || r == '_' || r == '-' {
-			result = append(result, r)
-		}
-	}
-	return string(result)
 }
