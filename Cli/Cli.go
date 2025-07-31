@@ -26,7 +26,7 @@ type Metadata struct {
 func GreeterAndSelecter() string {
 	fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 	ascII("         Y2Go")
-	fmt.Printf("\nV0.5 Dev ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+	fmt.Printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ V0.5.1 Dev\n")
 	path := Promt("Enter a full path to a music file:")
 	return path
 }
@@ -59,7 +59,7 @@ func filterSpecialSymbols(input string) string {
 	return string(result)
 }
 
-func PrintMetadata(m Metadata) {
+func PrintMetadata(m *Metadata) {
 	//if m.Picture != nil {
 	//decodeImage(m.Picture.Data, m.Picture.MIMEType)
 	//}
