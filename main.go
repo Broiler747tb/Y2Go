@@ -11,7 +11,6 @@ import (
 
 func main() {
 	path := CLI.GreeterAndSelecter()
-	var data *CLI.Metadata
 
 	if strings.HasSuffix(path, ".mp3") {
 		Mp3.PlayMp3(path)
@@ -25,5 +24,4 @@ func main() {
 	if strings.HasSuffix(path, ".ogg") {
 		Vorbis.PlayVorbis(path)
 	}
-	CLI.PrintMetadata(*data)
 }
