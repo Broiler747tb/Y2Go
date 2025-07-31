@@ -52,6 +52,6 @@ func PlayFlac(path string) {
 	speaker.Play(beep.Seq(streamer, beep.Callback(func() {
 		done <- true
 	})))
-	CLI.PrintMetadata(Meta)
+	CLI.PrintMetadata(&Meta)
 	<-done
 }

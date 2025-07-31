@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// /home/daniil/Downloads/049 - Usher - DJ Got Us Fallin' In Love.flac
 func PlayMp3(path string) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -55,6 +56,6 @@ func PlayMp3(path string) {
 	speaker.Play(beep.Seq(streamer, beep.Callback(func() {
 		done <- true
 	})))
-	CLI.PrintMetadata(Meta)
+	CLI.PrintMetadata(&Meta)
 	<-done
 }

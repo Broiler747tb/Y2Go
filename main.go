@@ -6,22 +6,23 @@ import (
 	"Y2Go/Mp3"
 	"Y2Go/Vorbis"
 	"Y2Go/Wav"
-	"strings"
+	"fmt"
+	"path/filepath"
 )
 
 func main() {
 	path := CLI.GreeterAndSelecter()
-
-	if strings.HasSuffix(path, ".mp3") {
+	ext := filepath.Ext(path)
+	switch ext {
+	case ".mp3":
 		Mp3.PlayMp3(path)
-	}
-	if strings.HasSuffix(path, ".flac") {
+	case ".flac":
 		Flac.PlayFlac(path)
-	}
-	if strings.HasSuffix(path, ".wav") {
+	case ".wav":
 		Wav.PlayWav(path)
-	}
-	if strings.HasSuffix(path, ".ogg") {
+	case ".ogg":
 		Vorbis.PlayVorbis(path)
+	default:
+		fmt.Println("Error: Not supported file format!")
 	}
 }
