@@ -1,15 +1,17 @@
-package UniPlayer
+package Player
 
+import "C"
 import (
-	CLI "Y2Go/Cli"
-	"fmt"
 	"github.com/dhowden/tag"
+	"github.com/eiannone/keyboard"
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/flac"
 	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/vorbis"
 	"github.com/faiface/beep/wav"
+
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -17,31 +19,18 @@ import (
 	"time"
 )
 
-func Play(path string) {
+func Play(path string, metadata chan tag.Metadata, Playended chan bool, position chan float64) {
 	ext := filepath.Ext(path)
 	f, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var Meta CLI.Metadata
-
 	m, err := tag.ReadFrom(f)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if m != nil {
-		Meta = CLI.Metadata{
-			Song:   m.Title(),
-			Artist: m.Artist(),
-			Album:  m.Album(),
-			Year:   m.Year(),
-			Genre:  m.Genre(),
-		}
-		if pic := m.Picture(); pic != nil {
-			Meta.Picture = *pic
-		}
-	}
+	metadata <- m
 	_, err = f.Seek(0, 0)
 	if err != nil {
 		log.Fatal(err)
@@ -49,6 +38,13 @@ func Play(path string) {
 
 	streamer, format := extensionSwitcher(f, ext)
 	defer streamer.Close()
+	go func() {
+		for {
+			percent := float64(streamer.Position()) / float64(streamer.Len())
+			time.Sleep(time.Millisecond * 250)
+			position <- percent
+		}
+	}()
 
 	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
 
@@ -57,7 +53,7 @@ func Play(path string) {
 	speaker.Play(beep.Seq(ctrl, beep.Callback(func() {
 		done <- true
 	})))
-	CLI.PrintMetadata(&Meta)
+
 	<-done
 }
 
@@ -92,5 +88,22 @@ func extensionSwitcher(f io.ReadCloser, ext string) (beep.StreamSeekCloser, beep
 		var streamer beep.StreamSeekCloser
 		var format beep.Format
 		return streamer, format
+	}
+}
+
+func stopper() {
+	keysEvents, _ := keyboard.GetKeys(10)
+	defer func() {
+		_ = keyboard.Close()
+	}()
+	for {
+		event := <-keysEvents
+		if event.Err != nil {
+			panic(event.Err)
+		}
+		fmt.Printf("You pressed: rune %q, key %X\r\n", event.Rune, event.Key)
+		if event.Key == keyboard.KeyEsc {
+			break
+		}
 	}
 }
