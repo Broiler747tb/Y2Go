@@ -26,7 +26,7 @@ type Metadata struct {
 func GreeterAndSelecter() string {
 	fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 	ascII("         Y2Go")
-	fmt.Printf("\nV0.5 Dev ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+	fmt.Printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ V0.6 Dev\n")
 	path := Promt("Enter a full path to a music file:")
 	return path
 }
@@ -54,12 +54,14 @@ func filterSpecialSymbols(input string) string {
 	for _, r := range input {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == ' ' || r == '(' || r == ')' || r == '_' || r == '-' || r == '?' || r == '!' || r == '@' || r == '#' || r == '&' || r == '*' || r == '"' || r == '/' || r == '|' {
 			result = append(result, r)
+		} else {
+			fmt.Println("Error: Unsupported symbol in the Name/Metadata")
 		}
 	}
 	return string(result)
 }
 
-func PrintMetadata(m Metadata) {
+func PrintMetadata(m *Metadata) {
 	//if m.Picture != nil {
 	//decodeImage(m.Picture.Data, m.Picture.MIMEType)
 	//}
