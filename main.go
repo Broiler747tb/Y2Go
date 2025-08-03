@@ -8,7 +8,10 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"github.com/dhowden/tag"
 	"image"
@@ -18,17 +21,17 @@ import (
 )
 
 func main() {
-	a := app.New()
+	a := app.NewWithID("com.Player.Y2Go")
 	w := a.NewWindow("Y2Go")
 
 	entry := widget.NewEntry()
 	entry.SetPlaceHolder("Enter a file path:")
 
 	Data := make(chan tag.Metadata, 3)
-	Done := make(chan bool, 3)
 	Position := make(chan float64, 10)
+	SetPosition := make(chan float64, 5)
 
-	f, _ := os.Open("4a51f2bcb67da9e5f941ffcc89f9bf00.jpg")
+	f, _ := os.Open("defaultCoverArt.jpg")
 	ima, _, _ := image.Decode(f)
 	f.Close()
 
@@ -36,24 +39,40 @@ func main() {
 	albumCover.Image = ima
 	albumCover.FillMode = canvas.ImageFillContain
 	albumCover.SetMinSize(fyne.NewSize(100, 100))
+
 	coverContainer := container.NewMax(albumCover)
 
 	var userInput string
 	button := widget.NewButton("Add to the queue/Play!", func() {
-		userInput = entry.Text
-		fmt.Println("Button pressed. Playing:", userInput)
-		go Player.Play(userInput, Data, Done, Position)
+		go Player.Play(userInput, Data, Position, SetPosition)
 	})
 
-	progress := widget.NewProgressBar()
+	selectFile := widget.NewButton("Select a file:", func() {
+		fileDialog := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+			if reader == nil {
+				fmt.Println("file selection canceled")
+				return
+			}
+			defer reader.Close()
 
-	// Listen for metadata and update UI
+			userInput = reader.URI().Path()
+			fmt.Println(userInput)
+		}, w)
+		fileDialog.Resize(fyne.NewSize(9999, 9999))
+		fileDialog.SetFilter(storage.NewExtensionFileFilter([]string{".mp3", ".wav", ".flac", ".ogg"}))
+		fileDialog.Show()
+	})
+
 	go func() {
 		for meta := range Data {
 			fmt.Println("Received metadata:", meta.Title())
 			pic := meta.Picture()
 			if pic == nil {
 				fmt.Println("No album art in metadata")
+				f, _ := os.Open("defaultCoverArt.jpg")
+				ima, _, _ = image.Decode(f)
+				albumCover.Image = ima
+				f.Close()
 				continue
 			}
 
@@ -77,17 +96,53 @@ func main() {
 		}
 	}()
 
+	slider := widget.NewSlider(0.0, 200.0)
+
+	var isInternalChange bool
+	var userInputs bool
+
+	slider.OnChanged = func(value float64) {
+		userInputs = true
+	}
+	slider.OnChangeEnded = func(value float64) {
+		userInputs = false
+		if isInternalChange {
+			return
+		} else {
+			select {
+			case SetPosition <- value:
+			default:
+			}
+		}
+	}
+
 	go func() {
 		for prog := range Position {
 			fyne.Do(func() {
-				progress.SetValue(prog)
+				if !userInputs {
+					isInternalChange = true
+					slider.SetValue(prog * 200)
+					isInternalChange = false
+				}
 			})
 		}
 	}()
 
-	entryContainer := container.New(layout.NewMaxLayout(), entry)
-	addWindow := container.New(layout.NewBorderLayout(nil, button, nil, nil), entryContainer, button)
-	playWindow := container.New(layout.NewBorderLayout(nil, progress, nil, nil), coverContainer, progress)
+	if desk, ok := a.(desktop.App); ok {
+		iconBytes, err := os.ReadFile("trayIcon.png")
+		if err == nil {
+			iconRes := fyne.NewStaticResource("trayIcon.png", iconBytes)
+			a.SetIcon(iconRes) // Set the icon on the app
+		}
+		m := fyne.NewMenu("Y2Go",
+			fyne.NewMenuItem("Show", func() {
+				w.Show()
+			}))
+		desk.SetSystemTrayMenu(m)
+	}
+
+	addWindow := container.New(layout.NewBorderLayout(nil, button, nil, nil), selectFile, button)
+	playWindow := container.New(layout.NewBorderLayout(nil, slider, nil, nil), coverContainer, slider)
 
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Player", playWindow),
@@ -97,7 +152,10 @@ func main() {
 
 	tabs.SetTabLocation(container.TabLocationTop)
 	w.SetContent(tabs)
-	w.Resize(fyne.NewSize(300, 300))
+	w.Resize(fyne.NewSize(400, 400))
+	w.SetCloseIntercept(func() {
+		w.Hide()
+	})
 	w.ShowAndRun()
 }
 

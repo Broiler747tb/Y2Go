@@ -3,13 +3,12 @@ package Player
 import "C"
 import (
 	"github.com/dhowden/tag"
-	"github.com/eiannone/keyboard"
-	"github.com/faiface/beep"
-	"github.com/faiface/beep/flac"
-	"github.com/faiface/beep/mp3"
-	"github.com/faiface/beep/speaker"
-	"github.com/faiface/beep/vorbis"
-	"github.com/faiface/beep/wav"
+	"github.com/gopxl/beep/v2"
+	"github.com/gopxl/beep/v2/flac"
+	"github.com/gopxl/beep/v2/mp3"
+	"github.com/gopxl/beep/v2/speaker"
+	"github.com/gopxl/beep/v2/vorbis"
+	"github.com/gopxl/beep/v2/wav"
 
 	"fmt"
 	"io"
@@ -19,7 +18,14 @@ import (
 	"time"
 )
 
-func Play(path string, metadata chan tag.Metadata, Playended chan bool, position chan float64) {
+var speakerInitialized bool = false
+var GlobalPlayEnded bool = true
+
+func Play(path string, metadata chan tag.Metadata, position chan float64, setPosition chan float64) {
+	for !GlobalPlayEnded {
+		time.Sleep(time.Millisecond * 100)
+	}
+	var playEnded bool = true
 	ext := filepath.Ext(path)
 	f, err := os.Open(path)
 	if err != nil {
@@ -38,15 +44,13 @@ func Play(path string, metadata chan tag.Metadata, Playended chan bool, position
 
 	streamer, format := extensionSwitcher(f, ext)
 	defer streamer.Close()
-	go func() {
-		for {
-			percent := float64(streamer.Position()) / float64(streamer.Len())
-			time.Sleep(time.Millisecond * 250)
-			position <- percent
-		}
-	}()
 
-	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
+	if !speakerInitialized {
+		speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
+		speakerInitialized = true
+	}
+	playEnded = false
+	GlobalPlayEnded = false
 
 	done := make(chan bool)
 	ctrl := &beep.Ctrl{Streamer: streamer, Paused: false}
@@ -54,7 +58,39 @@ func Play(path string, metadata chan tag.Metadata, Playended chan bool, position
 		done <- true
 	})))
 
+	var seeking bool
+
+	go func() {
+		for set := range setPosition {
+			if !playEnded {
+				seeking = true
+				pos := int(float64(streamer.Len()) * (set / 200.0))
+				streamer.Seek(pos)
+				seeking = false
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			if !seeking {
+				if !playEnded {
+					time.Sleep(time.Millisecond * 200)
+					percent := float64(streamer.Position()) / float64(streamer.Len())
+					select {
+					case position <- percent:
+					default:
+					}
+				}
+			} else {
+				break
+			}
+		}
+	}()
+
 	<-done
+	playEnded = true
+	GlobalPlayEnded = true
 }
 
 func extensionSwitcher(f io.ReadCloser, ext string) (beep.StreamSeekCloser, beep.Format) {
@@ -88,22 +124,5 @@ func extensionSwitcher(f io.ReadCloser, ext string) (beep.StreamSeekCloser, beep
 		var streamer beep.StreamSeekCloser
 		var format beep.Format
 		return streamer, format
-	}
-}
-
-func stopper() {
-	keysEvents, _ := keyboard.GetKeys(10)
-	defer func() {
-		_ = keyboard.Close()
-	}()
-	for {
-		event := <-keysEvents
-		if event.Err != nil {
-			panic(event.Err)
-		}
-		fmt.Printf("You pressed: rune %q, key %X\r\n", event.Rune, event.Key)
-		if event.Key == keyboard.KeyEsc {
-			break
-		}
 	}
 }
