@@ -29,12 +29,18 @@ func main() {
 	entry.SetPlaceHolder("Enter a file path:")
 
 	Data := make(chan tag.Metadata, 3)
-	Position := make(chan float64, 10)
-	SetPosition := make(chan float64, 5)
+	Position := make(chan float64, 3)
+	SetPosition := make(chan float64, 3)
 	Stop := make(chan bool, 3)
 
-	f, _ := os.Open("Assets/defaultCoverArt.jpg")
-	ima, _, _ := image.Decode(f)
+	f, err := os.Open("Assets/defaultCoverArt.jpg")
+	if err != nil {
+		fmt.Println("Failed to load default cover image:", err)
+	}
+	ima, _, err := image.Decode(f)
+	if err != nil {
+		fmt.Println("Failed to decode default cover image:")
+	}
 	f.Close()
 
 	albumCover := canvas.NewImageFromImage(nil)
@@ -80,12 +86,12 @@ func main() {
 
 			img, _, err := image.Decode(bytes.NewReader(pic.Data))
 			if err != nil {
-				fmt.Println("Error decoding image:", err)
+				fmt.Println("Failed to decode metadata image:", err)
 				continue
 			}
 
 			fyne.Do(func() {
-				fmt.Println("Updating image")
+				fmt.Println("Updating metadata image")
 				albumCover.Image = img
 				albumCover.Refresh()
 				coverContainer.Refresh()
@@ -134,7 +140,9 @@ func main() {
 		iconBytes, err := os.ReadFile("Assets/trayIcon.png")
 		if err == nil {
 			iconRes := fyne.NewStaticResource("Assets/trayIcon.png", iconBytes)
-			a.SetIcon(iconRes) // Set the icon on the app
+			a.SetIcon(iconRes)
+		} else {
+			fmt.Println("Failed to load tray icon")
 		}
 		m := fyne.NewMenu("Y2Go",
 			fyne.NewMenuItem("Show", func() {
