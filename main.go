@@ -31,7 +31,7 @@ func main() {
 	Position := make(chan float64, 10)
 	SetPosition := make(chan float64, 5)
 
-	f, _ := os.Open("defaultCoverArt.jpg")
+	f, _ := os.Open("Assets/defaultCoverArt.jpg")
 	ima, _, _ := image.Decode(f)
 	f.Close()
 
@@ -69,7 +69,7 @@ func main() {
 			pic := meta.Picture()
 			if pic == nil {
 				fmt.Println("No album art in metadata")
-				f, _ := os.Open("defaultCoverArt.jpg")
+				f, _ := os.Open("Assets/defaultCoverArt.jpg")
 				ima, _, _ = image.Decode(f)
 				albumCover.Image = ima
 				f.Close()
@@ -129,9 +129,9 @@ func main() {
 	}()
 
 	if desk, ok := a.(desktop.App); ok {
-		iconBytes, err := os.ReadFile("trayIcon.png")
+		iconBytes, err := os.ReadFile("Assets/trayIcon.png")
 		if err == nil {
-			iconRes := fyne.NewStaticResource("trayIcon.png", iconBytes)
+			iconRes := fyne.NewStaticResource("Assets/trayIcon.png", iconBytes)
 			a.SetIcon(iconRes) // Set the icon on the app
 		}
 		m := fyne.NewMenu("Y2Go",
