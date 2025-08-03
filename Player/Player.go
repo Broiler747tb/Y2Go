@@ -21,7 +21,7 @@ import (
 var speakerInitialized bool = false
 var GlobalPlayEnded bool = true
 
-func Play(path string, metadata chan tag.Metadata, position chan float64, setPosition chan float64) {
+func Play(path string, metadata chan tag.Metadata, position chan float64, setPosition chan float64, Stop chan bool) {
 	for !GlobalPlayEnded {
 		time.Sleep(time.Millisecond * 100)
 	}
@@ -87,7 +87,21 @@ func Play(path string, metadata chan tag.Metadata, position chan float64, setPos
 			}
 		}
 	}()
+	go func() {
+		for Stopper := range Stop {
+			if !playEnded {
+				if Stopper {
+					if ctrl.Paused {
+						ctrl.Paused = false
+					} else {
+						ctrl.Paused = true
+					}
 
+				}
+				fmt.Println(ctrl.Paused)
+			}
+		}
+	}()
 	<-done
 	playEnded = true
 	GlobalPlayEnded = true

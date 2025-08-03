@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/dhowden/tag"
 	"image"
@@ -30,6 +31,7 @@ func main() {
 	Data := make(chan tag.Metadata, 3)
 	Position := make(chan float64, 10)
 	SetPosition := make(chan float64, 5)
+	Stop := make(chan bool, 3)
 
 	f, _ := os.Open("Assets/defaultCoverArt.jpg")
 	ima, _, _ := image.Decode(f)
@@ -44,7 +46,7 @@ func main() {
 
 	var userInput string
 	button := widget.NewButton("Add to the queue/Play!", func() {
-		go Player.Play(userInput, Data, Position, SetPosition)
+		go Player.Play(userInput, Data, Position, SetPosition, Stop)
 	})
 
 	selectFile := widget.NewButton("Select a file:", func() {
@@ -141,8 +143,15 @@ func main() {
 		desk.SetSystemTrayMenu(m)
 	}
 
+	Play := widget.NewButtonWithIcon("", theme.MediaPlayIcon(), func() {
+		Stop <- true
+	})
+	Play.Resize(fyne.Size{20, 20})
+	Nb := container.NewHBox(layout.NewSpacer(), Play, layout.NewSpacer())
+	SliderAndButtons := container.NewBorder(Nb, slider, nil, nil)
+
 	addWindow := container.New(layout.NewBorderLayout(nil, button, nil, nil), selectFile, button)
-	playWindow := container.New(layout.NewBorderLayout(nil, slider, nil, nil), coverContainer, slider)
+	playWindow := container.New(layout.NewBorderLayout(layout.NewSpacer(), SliderAndButtons, nil, nil), albumCover, SliderAndButtons)
 
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Player", playWindow),
@@ -158,5 +167,3 @@ func main() {
 	})
 	w.ShowAndRun()
 }
-
-// /home/daniil/Downloads/OldFlavours.mp3
