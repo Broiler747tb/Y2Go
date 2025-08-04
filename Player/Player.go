@@ -98,7 +98,6 @@ func Play(path string, metadata chan tag.Metadata, position chan float64, setPos
 					}
 
 				}
-				fmt.Println(ctrl.Paused)
 			}
 		}
 	}()

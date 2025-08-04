@@ -19,10 +19,12 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
+	"time"
 )
 
 func main() {
-	a := app.NewWithID("com.Player.Y2Go")
+	a := app.NewWithID("com.y2go.player")
+	a.SetIcon(resourceAppIconPng)
 	w := a.NewWindow("Y2Go")
 
 	entry := widget.NewEntry()
@@ -70,9 +72,16 @@ func main() {
 		fileDialog.SetFilter(storage.NewExtensionFileFilter([]string{".mp3", ".wav", ".flac", ".ogg"}))
 		fileDialog.Show()
 	})
-
+	var ExtMeta tag.Metadata
+	var MetaReady = false
 	go func() {
 		for meta := range Data {
+			if meta.Title() != "" {
+				MetaReady = true
+				ExtMeta = meta
+			} else {
+				MetaReady = false
+			}
 			fmt.Println("Received metadata:", meta.Title())
 			pic := meta.Picture()
 			if pic == nil {
@@ -155,11 +164,30 @@ func main() {
 		Stop <- true
 	})
 	Play.Resize(fyne.Size{20, 20})
-	Nb := container.NewHBox(layout.NewSpacer(), Play, layout.NewSpacer())
-	SliderAndButtons := container.NewBorder(Nb, slider, nil, nil)
+	ButtonRow := container.NewHBox(layout.NewSpacer(), Play, layout.NewSpacer())
+	SongName := widget.NewLabel("Unknown")
+	SongName.TextStyle = fyne.TextStyle{Bold: true}
+	SongNameRow := container.NewHBox(layout.NewSpacer(), SongName, layout.NewSpacer())
+	SongArtist := widget.NewLabel("Unknown artist")
+	SongArtistRow := container.NewHBox(layout.NewSpacer(), SongArtist, layout.NewSpacer())
+	ButtonsAndMeta := container.NewVBox(SongNameRow, SongArtistRow, ButtonRow)
+	SliderAndButtons := container.NewBorder(ButtonsAndMeta, slider, nil, nil)
 
 	addWindow := container.New(layout.NewBorderLayout(nil, button, nil, nil), selectFile, button)
 	playWindow := container.New(layout.NewBorderLayout(layout.NewSpacer(), SliderAndButtons, nil, nil), albumCover, SliderAndButtons)
+
+	go func() {
+		for {
+			time.Sleep(time.Second)
+			if MetaReady {
+				fyne.Do(func() {
+					SongName.SetText(ExtMeta.Title())
+					Artist := fmt.Sprint(`By `, ExtMeta.Artist())
+					SongArtist.SetText(Artist)
+				})
+			}
+		}
+	}()
 
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Player", playWindow),
